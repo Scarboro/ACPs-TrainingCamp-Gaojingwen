@@ -1,0 +1,18 @@
+from task_timer import TaskTimer
+import time
+
+timer = TaskTimer()
+
+# 普通计时
+timer.start("数据处理")
+time.sleep(1)
+timer.end("数据处理")
+
+# with 自动计时
+with timer.task("模型训练"):
+    time.sleep(2)
+
+timer.summary()
+
+# 导出 CSV
+timer.export_csv()
