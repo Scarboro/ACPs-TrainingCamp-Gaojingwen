@@ -1,59 +1,82 @@
 """
-任务耗时统计小工具
-功能：记录任务开始/结束时间，计算耗时，支持多次记录和汇总显示。
+Task Timer - 简易任务耗时统计工具
 """
 
 import time
+import csv
 from datetime import datetime
+from contextlib import contextmanager
+
 
 class TaskTimer:
-    """简单的任务计时器，支持多个任务记录"""
     def __init__(self):
-        self.records = []  # 存储(任务名, 开始时间, 结束时间)
+        self.running = {}
+        self.records = []
 
     def start(self, task_name: str):
-        """开始一个任务，记录当前时间"""
-        start_time = time.time()
-        readable_start = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        print(f"[开始] {task_name} at {readable_start}")
-        # 暂时存储未完成的任务，用列表保存开始信息
-        return task_name, start_time
+        if task_name in self.running:
+            print(f"[警告] 任务 '{task_name}' 已在运行")
+            return
 
-    def end(self, task_info: tuple):
-        """结束任务，记录结束时间并保存记录"""
-        task_name, start_time = task_info
+        start_time = time.time()
+        self.running[task_name] = start_time
+        print(f"[开始] {task_name} at {self._now_str()}")
+
+    def end(self, task_name: str):
+        if task_name not in self.running:
+            print(f"[错误] 任务 '{task_name}' 未开始")
+            return
+
+        start_time = self.running.pop(task_name)
         end_time = time.time()
-        readable_end = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         elapsed = end_time - start_time
+
         self.records.append((task_name, start_time, end_time, elapsed))
-        print(f"[结束] {task_name} at {readable_end} | 耗时: {elapsed:.2f} 秒")
-        return elapsed
+        print(f"[结束] {task_name} at {self._now_str()} | 耗时: {elapsed:.2f}s")
+
+    @contextmanager
+    def task(self, task_name: str):
+        self.start(task_name)
+        try:
+            yield
+        finally:
+            self.end(task_name)
 
     def summary(self):
-        """打印所有任务的耗时汇总"""
         if not self.records:
-            print("暂无任务记录。")
+            print("暂无任务记录")
             return
+
+        total = 0
         print("\n===== 耗时汇总 =====")
-        total_time = 0.0
-        for i, (name, st, et, elapsed) in enumerate(self.records, 1):
+        for i, (name, st, et, el) in enumerate(self.records, 1):
             start_str = datetime.fromtimestamp(st).strftime("%H:%M:%S")
             end_str = datetime.fromtimestamp(et).strftime("%H:%M:%S")
-            print(f"{i}. {name}: {start_str} -> {end_str} | {elapsed:.2f}s")
-            total_time += elapsed
-        print(f"总耗时: {total_time:.2f} 秒")
+            print(f"{i}. {name}: {start_str} -> {end_str} | {el:.2f}s")
+            total += el
+
+        print(f"总耗时: {total:.2f}s")
         print("=====================")
 
-# 使用示例
-if __name__ == "__main__":
-    timer = TaskTimer()
-    # 模拟任务
-    task1 = timer.start("数据处理")
-    time.sleep(1.5)  # 模拟工作
-    timer.end(task1)
+    def export_csv(self, filename="task_log.csv"):
+        if not self.records:
+            print("没有数据可导出")
+            return
 
-    task2 = timer.start("模型训练")
-    time.sleep(2.3)
-    timer.end(task2)
+        with open(filename, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["任务名", "开始时间", "结束时间", "耗时(秒)"])
 
-    timer.summary()
+            for name, st, et, el in self.records:
+                writer.writerow([
+                    name,
+                    datetime.fromtimestamp(st).strftime("%Y-%m-%d %H:%M:%S"),
+                    datetime.fromtimestamp(et).strftime("%Y-%m-%d %H:%M:%S"),
+                    f"{el:.2f}"
+                ])
+
+        print(f"已导出到 {filename}")
+
+    @staticmethod
+    def _now_str():
+        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
