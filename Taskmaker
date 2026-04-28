@@ -1,0 +1,59 @@
+"""
+任务耗时统计小工具
+功能：记录任务开始/结束时间，计算耗时，支持多次记录和汇总显示。
+"""
+
+import time
+from datetime import datetime
+
+class TaskTimer:
+    """简单的任务计时器，支持多个任务记录"""
+    def __init__(self):
+        self.records = []  # 存储(任务名, 开始时间, 结束时间)
+
+    def start(self, task_name: str):
+        """开始一个任务，记录当前时间"""
+        start_time = time.time()
+        readable_start = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        print(f"[开始] {task_name} at {readable_start}")
+        # 暂时存储未完成的任务，用列表保存开始信息
+        return task_name, start_time
+
+    def end(self, task_info: tuple):
+        """结束任务，记录结束时间并保存记录"""
+        task_name, start_time = task_info
+        end_time = time.time()
+        readable_end = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        elapsed = end_time - start_time
+        self.records.append((task_name, start_time, end_time, elapsed))
+        print(f"[结束] {task_name} at {readable_end} | 耗时: {elapsed:.2f} 秒")
+        return elapsed
+
+    def summary(self):
+        """打印所有任务的耗时汇总"""
+        if not self.records:
+            print("暂无任务记录。")
+            return
+        print("\n===== 耗时汇总 =====")
+        total_time = 0.0
+        for i, (name, st, et, elapsed) in enumerate(self.records, 1):
+            start_str = datetime.fromtimestamp(st).strftime("%H:%M:%S")
+            end_str = datetime.fromtimestamp(et).strftime("%H:%M:%S")
+            print(f"{i}. {name}: {start_str} -> {end_str} | {elapsed:.2f}s")
+            total_time += elapsed
+        print(f"总耗时: {total_time:.2f} 秒")
+        print("=====================")
+
+# 使用示例
+if __name__ == "__main__":
+    timer = TaskTimer()
+    # 模拟任务
+    task1 = timer.start("数据处理")
+    time.sleep(1.5)  # 模拟工作
+    timer.end(task1)
+
+    task2 = timer.start("模型训练")
+    time.sleep(2.3)
+    timer.end(task2)
+
+    timer.summary()
