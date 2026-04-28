@@ -26,7 +26,7 @@ timer.start("数据处理")
 time.sleep(1)
 timer.end("数据处理")
 
-# 自动计时（推荐）
+#自动计时
 with timer.task("模型训练"):
     time.sleep(2)
 
